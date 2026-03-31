@@ -2,4 +2,4 @@
 __pycache__/
 .env
 .tmp/
-local_test.db
+local_test.dblocal_test.db
