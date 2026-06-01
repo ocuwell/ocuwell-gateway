@@ -2,4 +2,8 @@
 __pycache__/
 .env
 .tmp/
-local_test.dblocal_test.db
+.coverage
+local_test.db
+apps/web/node_modules/
+apps/web/dist/
+apps/ui/node_modules/

@@ -117,10 +117,9 @@ Release decision:
 
 These are known blockers based on current repository state:
 - Add authentication/authorization layer (currently missing).
-- Add tests (`pytest` + unit/integration suites).
-- Harden DB URL handling to support reserved password characters.
 - Add structured audit logging module.
-- Add licensing module with service/repository boundaries.
+- Add rate limiting and observability for public licensing endpoints.
+- Disable or protect API documentation in production.
 
 ## 8) CI/CD Gate Policy
 
@@ -131,6 +130,8 @@ Minimum required CI checks before deploy:
 - integration tests pass
 - migration smoke test pass (`alembic upgrade head` on ephemeral DB)
 - dependency/security scan pass
+- SOUP register reviewed and updated for vendored third-party frontend assets
+  (`docs/soup-register.md`)
 
 Deployment promotion policy:
 - `dev -> staging` automatic after CI pass
@@ -141,7 +142,7 @@ Deployment promotion policy:
 Recommended baseline:
 - Hosting: Azure App Service (Linux, Python) with `Always On` enabled.
 - Edge/API governance: Azure API Management in front of gateway.
-- Database: Azure Database for MySQL.
+- Database: Azure SQL Database or Azure Database for MySQL.
 - Secrets: Azure Key Vault + Managed Identity.
 - Monitoring: Azure Monitor + Application Insights.
 
