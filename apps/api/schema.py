@@ -103,6 +103,37 @@ class LicenseDeactivationRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=255)
 
 
+class OfflineActivationFileRequest(BaseModel):
+    activation_request: dict[str, Any] | None = None
+    encoded_request: str | None = Field(default=None, min_length=1)
+
+
+class OfflineDeactivationFileRequest(BaseModel):
+    deactivation_request: dict[str, Any] | None = None
+    encoded_request: str | None = Field(default=None, min_length=1)
+
+
+class OfflineActivationFileResponse(BaseModel):
+    request_id: str = Field(min_length=1, max_length=255)
+    file_name: str = Field(min_length=1, max_length=255)
+    license_file_content: str = Field(min_length=1)
+    content_encoding: Literal["licensespring-offline-base64-json"] = "licensespring-offline-base64-json"
+    license_file_long_code: str = Field(min_length=1)
+    long_code_encoding: Literal["base32-ascii-no-padding"] = "base32-ascii-no-padding"
+
+
+class LicenseSpringDeactivationRequest(BaseModel):
+    license_key: str = Field(min_length=1, max_length=255)
+    hardware_id: str = Field(min_length=1, max_length=255)
+    product_code: str = Field(min_length=1, max_length=255)
+    request_id: str | None = Field(default=None, min_length=1, max_length=255)
+
+
+class LicenseSpringDeactivationResponse(BaseModel):
+    ok: bool
+    request_id: str | None = None
+
+
 class LicenseActivationRecord(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -8,8 +8,13 @@ from apps.api.schema import (
     LicenseActivationRequest,
     LicenseDeactivationRecord,
     LicenseDeactivationRequest,
+    LicenseSpringDeactivationRequest,
+    LicenseSpringDeactivationResponse,
     LicenseValidationRequest,
     LicenseValidationResult,
+    OfflineActivationFileRequest,
+    OfflineActivationFileResponse,
+    OfflineDeactivationFileRequest,
 )
 from internal.db import get_db
 from internal.license_store import (
@@ -17,6 +22,13 @@ from internal.license_store import (
     activate_license,
     deactivate_license,
     validate_license,
+)
+from internal.licensespring_gateway import (
+    LicenseSpringGatewayError,
+    create_licensespring_offline_license_file,
+    deactivate_licensespring_license,
+    resolve_desktop_activation_request,
+    resolve_desktop_deactivation_request,
 )
 from internal.product_store import get_product
 
@@ -72,6 +84,57 @@ def activate_offline_request(
     except LicensingError as exc:
         _raise_http_from_error(exc)
     return LicenseValidationResult.model_validate(validation)
+
+
+@client_license_router.post(
+    "/activate-offline/license-file",
+    response_model=OfflineActivationFileResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_offline_license_file(
+    payload: OfflineActivationFileRequest,
+) -> OfflineActivationFileResponse:
+    try:
+        activation_request = resolve_desktop_activation_request(
+            activation_request=payload.activation_request,
+            encoded_request=payload.encoded_request,
+        )
+        license_file = create_licensespring_offline_license_file(activation_request)
+    except LicenseSpringGatewayError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    return OfflineActivationFileResponse(**license_file)
+
+
+@client_license_router.post(
+    "/deactivate-licensespring",
+    response_model=LicenseSpringDeactivationResponse,
+)
+def deactivate_licensespring_endpoint(
+    payload: LicenseSpringDeactivationRequest,
+) -> LicenseSpringDeactivationResponse:
+    try:
+        result = deactivate_licensespring_license(payload.model_dump())
+    except LicenseSpringGatewayError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    return LicenseSpringDeactivationResponse(**result)
+
+
+@client_license_router.post(
+    "/deactivate-offline/request-file",
+    response_model=LicenseSpringDeactivationResponse,
+)
+def deactivate_offline_request_file(
+    payload: OfflineDeactivationFileRequest,
+) -> LicenseSpringDeactivationResponse:
+    try:
+        deactivation_request = resolve_desktop_deactivation_request(
+            deactivation_request=payload.deactivation_request,
+            encoded_request=payload.encoded_request,
+        )
+        result = deactivate_licensespring_license(deactivation_request)
+    except LicenseSpringGatewayError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    return LicenseSpringDeactivationResponse(**result)
 
 
 @client_license_router.post(
