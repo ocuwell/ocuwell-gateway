@@ -83,26 +83,6 @@ class LicenseRecord(BaseModel):
     created_at: datetime
 
 
-class LicenseActivationRequest(BaseModel):
-    license_key: str = Field(min_length=1, max_length=255)
-    product_id: UUID
-    device_id: str = Field(min_length=1, max_length=255)
-    product_version: str | None = Field(default=None, max_length=64)
-
-
-class LicenseValidationRequest(BaseModel):
-    license_key: str = Field(min_length=1, max_length=255)
-    product_id: UUID
-    device_id: str | None = Field(default=None, min_length=1, max_length=255)
-
-
-class LicenseDeactivationRequest(BaseModel):
-    license_key: str = Field(min_length=1, max_length=255)
-    product_id: UUID
-    device_id: str | None = Field(default=None, min_length=1, max_length=255)
-    reason: str | None = Field(default=None, max_length=255)
-
-
 class OfflineActivationFileRequest(BaseModel):
     activation_request: dict[str, Any] | None = None
     encoded_request: str | None = Field(default=None, min_length=1)
@@ -171,16 +151,6 @@ class LicenseRevocationRecord(BaseModel):
     reason: str | None = None
     revoked_by: str | None = None
     created_at: datetime
-
-
-class LicenseValidationResult(BaseModel):
-    license_id: UUID
-    product_id: UUID
-    is_valid: bool
-    status: str = Field(min_length=1, max_length=32)
-    is_active: bool
-    expires_at: datetime | None = None
-    device_registered: bool
 
 
 class AuditLogRecord(BaseModel):
