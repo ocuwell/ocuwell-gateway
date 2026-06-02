@@ -251,12 +251,14 @@ export function App() {
               icon={<FileUp size={18} aria-hidden="true" />}
               label="File"
               onClick={() => resetFlow(mode, "file")}
+              variant="primary"
             />
             <MethodButton
               active={method === "qr"}
               icon={<QrCode size={18} aria-hidden="true" />}
               label="QR"
               onClick={() => resetFlow(mode, "qr")}
+              variant="secondary"
             />
           </div>
 
@@ -357,14 +359,21 @@ function MethodButton({
   icon,
   label,
   onClick,
+  variant,
 }: {
   active: boolean;
   icon: ReactNode;
   label: string;
   onClick: () => void;
+  variant: "primary" | "secondary";
 }) {
   return (
-    <button className={`method-button ${active ? "active" : ""}`} type="button" onClick={onClick}>
+    <button
+      aria-pressed={active}
+      className={`method-button method-button-${variant} ${active ? "active" : ""}`}
+      type="button"
+      onClick={onClick}
+    >
       {icon}
       <span>{label}</span>
     </button>
@@ -678,7 +687,7 @@ function QrScanner({
 
   return (
     <div className="scanner">
-      <div className="scanner-preview">
+      <div className={`scanner-preview ${isCameraOpen ? "camera-open" : ""}`}>
         <video
           ref={videoRef}
           className={isCameraOpen ? "scanner-video" : "hidden"}
@@ -701,11 +710,11 @@ function QrScanner({
       <div className="button-row scanner-actions">
         <button className="primary-button" type="button" onClick={startCamera} disabled={disabled || isOpening || isCameraOpen}>
           {isOpening ? <Loader2 className="spin" size={17} aria-hidden="true" /> : <Camera size={17} aria-hidden="true" />}
-          {isOpening ? "Opening camera" : isCameraOpen ? "Camera active" : "Start camera"}
+          {isOpening ? "Opening camera" : isCameraOpen ? "Camera active" : "Allow camera"}
         </button>
         <button className="secondary-button" type="button" onClick={stopCamera} disabled={!isCameraOpen}>
           <XCircle size={17} aria-hidden="true" />
-          Stop
+          Stop camera
         </button>
       </div>
 
