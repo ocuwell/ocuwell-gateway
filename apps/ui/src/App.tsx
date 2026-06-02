@@ -48,10 +48,11 @@ type ResultState =
 
 const ACTIVATION_ENDPOINT = "/v1/client/licenses/activate-offline/license-file";
 const DEACTIVATION_ENDPOINT = "/v1/client/licenses/deactivate-offline/request-file";
-const QR_CHUNK_SIZE = 1420;
-const QR_MAX_CHUNKS = 3;
+const QR_CHUNK_SIZE = 1065;
+const QR_MAX_CHUNKS = 4;
 const QR_MAX_CONTENT_LENGTH = QR_CHUNK_SIZE * QR_MAX_CHUNKS;
 const QR_SCAN_INTERVAL_MS = 120;
+const QR_IMAGE_WIDTH = 540;
 
 const zxingHints = new Map<DecodeHintType, unknown>([
   [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]],
@@ -454,8 +455,8 @@ function ActivationResult({
       chunks.map((chunk) =>
         QRCode.toDataURL(chunk, {
           errorCorrectionLevel: "M",
-          margin: 1,
-          width: 420,
+          margin: 2,
+          width: QR_IMAGE_WIDTH,
         }),
       ),
     )
@@ -564,18 +565,24 @@ function ActivationResult({
             </div>
 
             <div className="button-row qr-actions">
-              <button className="secondary-button" type="button" onClick={resetQrHandoff}>
+              <button
+                aria-label="Restart QR handoff from QR 1"
+                className="secondary-button"
+                type="button"
+                onClick={resetQrHandoff}
+              >
                 <RefreshCw size={17} aria-hidden="true" />
-                Restart QR 1
+                Restart QR
               </button>
               <button
+                aria-label={`Mark QR ${Math.min(activeIndex + 1, chunks.length)} scanned`}
                 className="primary-button"
                 disabled={handoffComplete}
                 type="button"
                 onClick={markCurrentQrScanned}
               >
                 <CheckCircle2 size={17} aria-hidden="true" />
-                Mark QR {Math.min(activeIndex + 1, chunks.length)} scanned
+                Mark scanned
               </button>
             </div>
           </div>

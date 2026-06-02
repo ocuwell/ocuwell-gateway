@@ -567,22 +567,27 @@ button:disabled {
 
 .qr-steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .qr-step {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 38px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fffdf6;
   color: var(--muted);
-  font-size: 13px;
+  padding: 6px 8px;
+  font-size: 12px;
   font-weight: 800;
+}
+
+.qr-step span {
+  white-space: nowrap;
 }
 
 .qr-step.active {
@@ -613,12 +618,12 @@ button:disabled {
 }
 
 .qr-display img {
-  width: min(100%, 420px);
+  width: min(100%, 566px);
   aspect-ratio: 1;
   border: 1px solid #eadba8;
   border-radius: 8px;
   background: #ffffff;
-  padding: 8px;
+  padding: 12px;
 }
 
 .qr-display p {
@@ -627,7 +632,19 @@ button:disabled {
 }
 
 .qr-actions .primary-button,
-.qr-actions .secondary-button,
+.qr-actions .secondary-button {
+  flex: 0 1 auto;
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.qr-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .scanner-actions .primary-button,
 .scanner-actions .secondary-button {
   flex: 1 1 180px;
@@ -761,10 +778,6 @@ button:disabled {
     display: none;
   }
 
-  .qr-steps {
-    grid-template-columns: 1fr;
-  }
-
   .method-grid {
     gap: 8px;
   }
@@ -776,6 +789,40 @@ button:disabled {
   .primary-button,
   .secondary-button {
     width: 100%;
+  }
+
+  .qr-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .qr-step {
+    min-height: 30px;
+    gap: 2px;
+    padding: 4px 2px;
+    font-size: 10px;
+  }
+
+  .qr-step svg {
+    display: none;
+  }
+
+  .qr-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .qr-actions .primary-button,
+  .qr-actions .secondary-button {
+    min-height: 34px;
+    gap: 5px;
+    padding: 7px 6px;
+    font-size: 12px;
+  }
+
+  .qr-actions svg {
+    width: 14px;
+    height: 14px;
   }
 
   .scanner-actions {

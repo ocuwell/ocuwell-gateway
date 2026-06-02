@@ -159,8 +159,8 @@ For downloaded files and QR response content, use only `license_file_content`.
 The `.lic` file content must be exactly that base64 text, not the full JSON
 wrapper and not decoded JSON. The v1 release UI does not expose manual entry.
 
-For QR response transfer, split `license_file_content` into raw chunks of 1420
-characters, with a maximum of 3 chunks. Do not add headers, JSON wrappers, or
+For QR response transfer, split `license_file_content` into raw chunks of 1065
+characters, with a maximum of 4 chunks. Do not add headers, JSON wrappers, or
 chunk metadata to the QR payloads. The OcuMaps workstation combines scanned
 chunks in scan order.
 
