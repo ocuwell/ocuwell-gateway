@@ -433,7 +433,7 @@ function ActivationResult({
 }) {
   const chunks = useMemo(() => splitQrChunks(data.license_file_content), [data.license_file_content]);
   const canShowQr =
-    data.license_file_content.length <= QR_MAX_CONTENT_LENGTH && chunks.length <= QR_MAX_CHUNKS;
+    data.license_file_content.length <= QR_MAX_CONTENT_LENGTH && chunks.length === QR_MAX_CHUNKS;
   const [qrImages, setQrImages] = useState<string[]>([]);
   const [qrError, setQrError] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -519,14 +519,15 @@ function ActivationResult({
           <QrCode size={20} aria-hidden="true" />
           <div>
             <h3>Option 2: Camera QR transfer</h3>
-            <p>Show one response QR at a time. Mark each QR as scanned before revealing the next.</p>
+            <p>Show all four response QRs in order. Mark each QR as scanned before revealing the next.</p>
           </div>
         </div>
 
         {!canShowQr ? (
           <div className="warning-banner">
-            This response is {data.license_file_content.length} characters. QR transfer supports up
-            to {QR_MAX_CONTENT_LENGTH} characters, so use the response file.
+            {data.license_file_content.length > QR_MAX_CONTENT_LENGTH
+              ? `This response is ${data.license_file_content.length} characters. QR transfer supports up to ${QR_MAX_CONTENT_LENGTH} characters, so use the response file.`
+              : "QR transfer requires four non-empty response QRs for OCUMAPS, so use the response file."}
           </div>
         ) : qrError ? (
           <div className="error-banner">{qrError}</div>
@@ -786,7 +787,13 @@ function readErrorMessage(payload: unknown, fallback: string): string {
 }
 
 function splitQrChunks(content: string): string[] {
-  return content.match(new RegExp(`[\\s\\S]{1,${QR_CHUNK_SIZE}}`, "g")) ?? [];
+  if (!content) return [];
+
+  const chunkSize = Math.ceil(content.length / QR_MAX_CHUNKS);
+  // OcuMaps expects four raw scans in order; keep each QR payload as a direct slice.
+  return Array.from({ length: QR_MAX_CHUNKS }, (_, index) =>
+    content.slice(index * chunkSize, (index + 1) * chunkSize),
+  ).filter((chunk) => chunk.length > 0);
 }
 
 function decodeQrFromCanvas(
