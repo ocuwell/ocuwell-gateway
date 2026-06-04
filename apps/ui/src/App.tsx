@@ -2,6 +2,7 @@ import { BrowserQRCodeReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import jsQR from "jsqr";
 import {
+  ArrowLeft,
   Camera,
   CheckCircle2,
   Download,
@@ -48,9 +49,10 @@ type ResultState =
 
 const ACTIVATION_ENDPOINT = "/v1/client/licenses/activate-offline/license-file";
 const DEACTIVATION_ENDPOINT = "/v1/client/licenses/deactivate-offline/request-file";
-const QR_CHUNK_SIZE = 1065;
-const QR_MAX_CHUNKS = 4;
-const QR_MAX_CONTENT_LENGTH = QR_CHUNK_SIZE * QR_MAX_CHUNKS;
+const QR_CHUNK_SIZE = 850;
+const QR_MAX_CHUNKS = 5;
+const QR_NORMAL_CONTENT_LENGTH = 4300;
+const QR_MAX_CONTENT_LENGTH = 4500;
 const QR_SCAN_INTERVAL_MS = 120;
 const QR_IMAGE_WIDTH = 540;
 
@@ -65,9 +67,17 @@ export function App() {
   const [method, setMethod] = useState<TransferMethod>("file");
   const [requestInput, setRequestInput] = useState<RequestInput | null>(null);
   const [result, setResult] = useState<ResultState | null>(null);
+  const [activeStep, setActiveStep] = useState<"request" | "response">("request");
+  const [activationComplete, setActivationComplete] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasSavedResponse = result?.mode === mode;
+  const isResponseStep = activeStep === "response" && hasSavedResponse;
+  const requestReady = Boolean(requestInput);
+  const requestSent = isSubmitting || hasSavedResponse;
+  const responseReceived = hasSavedResponse;
+  const flowComplete = mode === "activation" ? hasSavedResponse && activationComplete : hasSavedResponse;
 
   const modeCopy = useMemo(
     () =>
@@ -100,6 +110,8 @@ export function App() {
     setMethod(nextMethod);
     setRequestInput(null);
     setResult(null);
+    setActiveStep("request");
+    setActivationComplete(false);
     setError("");
   }
 
@@ -163,11 +175,13 @@ export function App() {
 
       if (mode === "activation") {
         setResult({ mode, data: responseBody as ActivationResponse });
+        setActivationComplete(false);
         setToast("Activation response is ready.");
       } else {
         setResult({ mode, data: responseBody as DeactivationResponse });
         setToast("Deactivation processed.");
       }
+      setActiveStep("response");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "The gateway request failed.");
     } finally {
@@ -178,6 +192,8 @@ export function App() {
   function clearRequest() {
     setRequestInput(null);
     setResult(null);
+    setActiveStep("request");
+    setActivationComplete(false);
     setError("");
   }
 
@@ -191,6 +207,7 @@ export function App() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    setActivationComplete(true);
     setToast("License response file downloaded.");
   }
 
@@ -208,7 +225,7 @@ export function App() {
       <section className="hero-card">
         <div className="hero-copy">
           <p className="eyebrow">OCUMAPS licensing</p>
-          <h1>Activate and deactivate licenses from an online gateway.</h1>
+          <h1>Activate and Deactivate Your Licenses</h1>
           <p>
             Use this page when the OCUMAPS workstation is offline. Bring the request here by USB
             file or camera QR, then return the gateway response to the same workstation.
@@ -238,83 +255,125 @@ export function App() {
         />
       </section>
 
+      <section className="flow-stepper" aria-label="Request and response steps">
+        <div className={`flow-step ${requestSent ? "complete" : "active"}`}>
+          <span className="flow-dot" aria-hidden="true" />
+          <div>
+            <small>Step 1</small>
+            <strong>Upload request</strong>
+          </div>
+        </div>
+        <div className={`flow-step ${responseReceived ? "complete" : requestSent ? "active" : "locked"}`}>
+          <span className="flow-dot" aria-hidden="true" />
+          <div>
+            <small>Step 2</small>
+            <strong>Request sent</strong>
+          </div>
+        </div>
+        <div className={`flow-step ${flowComplete ? "complete" : responseReceived ? "active" : "locked"}`}>
+          <span className="flow-dot" aria-hidden="true" />
+          <div>
+            <small>Step 3</small>
+            <strong>Response received</strong>
+          </div>
+        </div>
+      </section>
+
       <section className="workspace-grid">
-        <section className="panel request-panel">
-          <div className="panel-heading">
-            <p className="eyebrow">Request</p>
-            <h2>{modeCopy.heading}</h2>
-            <p>{modeCopy.helper}</p>
-          </div>
-
-          <div className="method-grid" aria-label="Request transfer method">
-            <MethodButton
-              active={method === "file"}
-              icon={<FileUp size={18} aria-hidden="true" />}
-              label="File"
-              onClick={() => resetFlow(mode, "file")}
-              variant="primary"
-            />
-            <MethodButton
-              active={method === "qr"}
-              icon={<QrCode size={18} aria-hidden="true" />}
-              label="QR"
-              onClick={() => resetFlow(mode, "qr")}
-              variant="secondary"
-            />
-          </div>
-
-          {method === "file" ? (
-            <div className="transfer-section">
-              <label className="upload-zone">
-                <FileUp size={30} aria-hidden="true" />
-                <strong>{requestInput?.source === "file" ? requestInput.label : "Choose request file"}</strong>
-                <span>.req, .json, or .txt exported from OCUMAPS</span>
-                <input
-                  accept=".req,.json,.txt,application/json,text/plain"
-                  type="file"
-                  onChange={handleFileChange}
-                />
-              </label>
+        {!isResponseStep ? (
+          <section className="panel request-panel">
+            <div className="panel-heading">
+              <p className="eyebrow">Request</p>
+              <h2>{modeCopy.heading}</h2>
+              <p>{modeCopy.helper}</p>
             </div>
-          ) : (
-            <div className="transfer-section">
-              <QrScanner disabled={isSubmitting} onScanned={handleScannedRequest} />
-            </div>
-          )}
 
-          {requestInput ? (
-            <div className="ready-banner">
-              <FileCheck2 size={18} aria-hidden="true" />
-              <div>
-                <strong>{modeCopy.ready}</strong>
-                <span>{requestInput.label}</span>
+            <div className="method-grid" aria-label="Request transfer method">
+              <MethodButton
+                active={method === "file"}
+                icon={<FileUp size={18} aria-hidden="true" />}
+                label="File"
+                onClick={() => resetFlow(mode, "file")}
+                variant="primary"
+              />
+              <MethodButton
+                active={method === "qr"}
+                icon={<QrCode size={18} aria-hidden="true" />}
+                label="QR"
+                onClick={() => resetFlow(mode, "qr")}
+                variant="secondary"
+              />
+            </div>
+
+            {method === "file" ? (
+              <div className="transfer-section">
+                <label className="upload-zone">
+                  <FileUp size={30} aria-hidden="true" />
+                  <strong>{requestInput?.source === "file" ? requestInput.label : "Choose request file"}</strong>
+                  <span>.req, .json, or .txt exported from OCUMAPS</span>
+                  <input
+                    accept=".req,.json,.txt,application/json,text/plain"
+                    type="file"
+                    onChange={handleFileChange}
+                  />
+                </label>
               </div>
+            ) : (
+              <div className="transfer-section">
+                <QrScanner disabled={isSubmitting} onScanned={handleScannedRequest} />
+              </div>
+            )}
+
+            {requestInput ? (
+              <div className="ready-banner">
+                <FileCheck2 size={18} aria-hidden="true" />
+                <div>
+                  <strong>{modeCopy.ready}</strong>
+                  <span>{requestInput.label}</span>
+                </div>
+              </div>
+            ) : null}
+
+            {error ? <div className="error-banner">{error}</div> : null}
+
+            <div className="button-row">
+              <button className="secondary-button" type="button" onClick={clearRequest} disabled={isSubmitting}>
+                <RefreshCw size={17} aria-hidden="true" />
+                Clear
+              </button>
+              {hasSavedResponse ? (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => {
+                    setActiveStep("response");
+                    setError("");
+                  }}
+                >
+                  <CheckCircle2 size={17} aria-hidden="true" />
+                  Open saved response
+                </button>
+              ) : null}
+              <button
+                className="primary-button"
+                disabled={isSubmitting || !requestInput}
+                type="button"
+                onClick={submitRequest}
+              >
+                {isSubmitting ? <Loader2 className="spin" size={17} aria-hidden="true" /> : null}
+                {modeCopy.submit}
+              </button>
             </div>
-          ) : null}
-
-          {error ? <div className="error-banner">{error}</div> : null}
-
-          <div className="button-row">
-            <button className="secondary-button" type="button" onClick={clearRequest} disabled={isSubmitting}>
-              <RefreshCw size={17} aria-hidden="true" />
-              Clear
-            </button>
-            <button
-              className="primary-button"
-              disabled={isSubmitting || !requestInput}
-              type="button"
-              onClick={submitRequest}
-            >
-              {isSubmitting ? <Loader2 className="spin" size={17} aria-hidden="true" /> : null}
-              {modeCopy.submit}
-            </button>
-          </div>
-        </section>
-
-        <ResultPanel
-          downloadActivationFile={downloadActivationFile}
-          result={result}
-        />
+          </section>
+        ) : (
+          <ResultPanel
+            downloadActivationFile={downloadActivationFile}
+                isActivationComplete={activationComplete}
+            onBack={() => setActiveStep("request")}
+                onQrHandoffComplete={() => setActivationComplete(true)}
+            result={result}
+          />
+        )}
       </section>
 
       {toast ? <div className="toast">{toast}</div> : null}
@@ -383,27 +442,26 @@ function MethodButton({
 
 function ResultPanel({
   downloadActivationFile,
+  isActivationComplete,
+  onBack,
+  onQrHandoffComplete,
   result,
 }: {
   downloadActivationFile: (data: ActivationResponse) => void;
-  result: ResultState | null;
+  isActivationComplete: boolean;
+  onBack: () => void;
+  onQrHandoffComplete: () => void;
+  result: ResultState;
 }) {
-  if (!result) {
-    return (
-      <aside className="panel result-panel empty-result">
-        <LockKeyhole size={42} aria-hidden="true" />
-        <h2>Gateway response</h2>
-        <p>
-          Activation responses appear here as a USB file download and ordered QR handoff. Offline
-          deactivation shows a success confirmation.
-        </p>
-      </aside>
-    );
-  }
-
   if (result.mode === "deactivation") {
     return (
       <aside className="panel result-panel">
+        <div className="result-toolbar">
+          <button className="secondary-button" type="button" onClick={onBack}>
+            <ArrowLeft size={16} aria-hidden="true" />
+            Back to request
+          </button>
+        </div>
         <div className="result-status success">
           <CheckCircle2 size={34} aria-hidden="true" />
           <div>
@@ -420,6 +478,9 @@ function ResultPanel({
     <ActivationResult
       data={result.data}
       downloadActivationFile={downloadActivationFile}
+      isActivationComplete={isActivationComplete}
+      onBack={onBack}
+      onQrHandoffComplete={onQrHandoffComplete}
     />
   );
 }
@@ -427,11 +488,20 @@ function ResultPanel({
 function ActivationResult({
   data,
   downloadActivationFile,
+  isActivationComplete,
+  onBack,
+  onQrHandoffComplete,
 }: {
   data: ActivationResponse;
   downloadActivationFile: (data: ActivationResponse) => void;
+  isActivationComplete: boolean;
+  onBack: () => void;
+  onQrHandoffComplete: () => void;
 }) {
   const chunks = useMemo(() => splitQrChunks(data.license_file_content), [data.license_file_content]);
+  const highDensityMode =
+    data.license_file_content.length > QR_NORMAL_CONTENT_LENGTH &&
+    data.license_file_content.length <= QR_MAX_CONTENT_LENGTH;
   const canShowQr =
     data.license_file_content.length <= QR_MAX_CONTENT_LENGTH && chunks.length === QR_MAX_CHUNKS;
   const [qrImages, setQrImages] = useState<string[]>([]);
@@ -475,6 +545,12 @@ function ActivationResult({
   const handoffComplete = completedCount >= chunks.length && chunks.length > 0;
   const currentQrImage = qrImages[activeIndex];
 
+  useEffect(() => {
+    if (handoffComplete) {
+      onQrHandoffComplete();
+    }
+  }, [handoffComplete, onQrHandoffComplete]);
+
   function markCurrentQrScanned() {
     const nextCompleted = Math.max(completedCount, activeIndex + 1);
     setCompletedCount(nextCompleted);
@@ -491,12 +567,19 @@ function ActivationResult({
 
   return (
     <aside className="panel result-panel">
+      <div className="result-toolbar">
+        <button className="secondary-button" type="button" onClick={onBack}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          Back to request
+        </button>
+      </div>
+
       <div className="result-status success">
         <CheckCircle2 size={34} aria-hidden="true" />
         <div>
           <p className="eyebrow">Ready</p>
           <h2>Activation response generated</h2>
-          <p>Request ID: {data.request_id}</p>
+          {isActivationComplete ? <p className="activation-complete-badge">Activation complete</p> : null}
         </div>
       </div>
 
@@ -519,15 +602,21 @@ function ActivationResult({
           <QrCode size={20} aria-hidden="true" />
           <div>
             <h3>Option 2: Camera QR transfer</h3>
-            <p>Show all four response QRs in order. Mark each QR as scanned before revealing the next.</p>
+            <p>Show all five response QRs in order. Mark each QR as scanned before revealing the next.</p>
           </div>
         </div>
+
+        {canShowQr && highDensityMode ? (
+          <div className="density-badge" role="status" aria-live="polite">
+            High-density QR mode. This response is large, so keep the camera steady while scanning.
+          </div>
+        ) : null}
 
         {!canShowQr ? (
           <div className="warning-banner">
             {data.license_file_content.length > QR_MAX_CONTENT_LENGTH
               ? `This response is ${data.license_file_content.length} characters. QR transfer supports up to ${QR_MAX_CONTENT_LENGTH} characters, so use the response file.`
-              : "QR transfer requires four non-empty response QRs for OCUMAPS, so use the response file."}
+              : "QR transfer requires five non-empty response QRs for OCUMAPS, so use the response file."}
           </div>
         ) : qrError ? (
           <div className="error-banner">{qrError}</div>
@@ -789,11 +878,23 @@ function readErrorMessage(payload: unknown, fallback: string): string {
 function splitQrChunks(content: string): string[] {
   if (!content) return [];
 
-  const chunkSize = Math.ceil(content.length / QR_MAX_CHUNKS);
-  // OcuMaps expects four raw scans in order; keep each QR payload as a direct slice.
-  return Array.from({ length: QR_MAX_CHUNKS }, (_, index) =>
-    content.slice(index * chunkSize, (index + 1) * chunkSize),
-  ).filter((chunk) => chunk.length > 0);
+  if (content.length > QR_NORMAL_CONTENT_LENGTH && content.length <= QR_MAX_CONTENT_LENGTH) {
+    const equalSplitSize = Math.ceil(content.length / QR_MAX_CHUNKS);
+    return Array.from({ length: QR_MAX_CHUNKS }, (_, index) =>
+      content.slice(index * equalSplitSize, (index + 1) * equalSplitSize),
+    ).filter((chunk) => chunk.length > 0);
+  }
+
+  const chunks = [
+    content.slice(0, QR_CHUNK_SIZE),
+    content.slice(QR_CHUNK_SIZE, QR_CHUNK_SIZE * 2),
+    content.slice(QR_CHUNK_SIZE * 2, QR_CHUNK_SIZE * 3),
+    content.slice(QR_CHUNK_SIZE * 3, QR_CHUNK_SIZE * 4),
+    content.slice(QR_CHUNK_SIZE * 4),
+  ];
+
+  // OcuMaps expects five raw scans in order; keep each QR payload as a direct slice.
+  return chunks.filter((chunk) => chunk.length > 0);
 }
 
 function decodeQrFromCanvas(
